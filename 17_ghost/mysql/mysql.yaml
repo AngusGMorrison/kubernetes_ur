@@ -1,0 +1,58 @@
+# Create dynamically provisioned mysql deployment using default
+# StorageClass.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      run: mysql
+  template:
+    metadata:
+      labels:
+        run: mysql
+    spec:
+      containers:
+        - name: database
+          image: mysql
+          resources:
+            requests:
+              cpu: 1
+              memory: 2Gi
+          env:
+            # Note: not secure
+            - name: MYSQL_ROOT_PASSWORD
+              value: password
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: database
+              # /var/lib/mysql is where MySQL stores its databases
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: database
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Service exposing mysql
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    run: mysql
+  ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
